@@ -31,7 +31,7 @@ void master(int nprocs)
     int stop = -1;
     int nClientesEnCola = nClientes;
 
-    while (!estaVacia(&colaClientes))
+    while (!estaVacia(&colaClientes) || nClientesAtendidos <= nClientes - 1)
     {
         //abrir cajas
         nClientesEnCola = longitudCola(&colaClientes); 
@@ -49,22 +49,30 @@ void master(int nprocs)
         //asignar clientes
         for (int i = 1; i <= nCajasAbiertas && nClientesEnCola > 0; i++)
         {
+            int tiempoCliente = 5 + ((rand()) % 6);
             int idCliente = desenfilear(&colaClientes).idCliente;
             MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+            MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
             nClientesEnCola = longitudCola(&colaClientes); 
             //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
         }
 
-        /*
-        for(int i = 1; i<= nCajasAbiertas && nClientesAtendidos < 20; i++)
-        {
-            int idClienteAtendido;
-            MPI_Recv(&idClienteAtendido, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("Cliente %d atendido en caja %d\n", idClienteAtendido, i);
+        
+        // for(int i = 1; i<= nCajasAbiertas && nClientesAtendidos < 20; i++)
+        // {
+        //     int idClienteAtendido;
+        //     MPI_Recv(&idClienteAtendido, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //     printf("Cliente %d atendido en caja %d\n", idClienteAtendido, i);
 
-            nClientesAtendidos++;
-        }
-        */
+        //     nClientesAtendidos++;
+        // }
+
+        int idClienteAtendido;
+        int idCaja;
+        MPI_Recv(&idClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&idCaja, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        printf("Cliente %d atendido en caja %d\n", idClienteAtendido, idCaja);
+        nClientesAtendidos++;
 
         //printf("numero de clientes en la cola: %d \n", nClientesEnCola);
         sleep(1);
@@ -82,24 +90,28 @@ void master(int nprocs)
 
 void slave(int rank)
 {
+
     while(1)
     {
         srand(time(NULL));
         int idCliente;
+        int tiempoCliente;
+
         MPI_Recv(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&tiempoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         if (idCliente == -1)
         {
             break;
         }
 
-        int tiempoCliente = 5 + ((rand()) % 6);
-        printf("dormire: %d", tiempoCliente);
+        printf("Yo, el cliente %d, dormire: %d y estoy en la caja: %d\n", idCliente, tiempoCliente, rank);
         
         sleep(tiempoCliente);
 
-        //MPI_Send(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
-        printf("Cliente %d atendido en caja %d\n", idCliente, rank);
+        MPI_Send(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
+        MPI_Send(&rank, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
+        //printf("Cliente %d atendido en caja %d\n", idCliente, rank);
 
     }
 }
