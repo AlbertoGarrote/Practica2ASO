@@ -41,10 +41,10 @@ void master(int nprocs)
     int nCajasAbiertas = nprocs/2;
     int nClientesAtendidos = 0;
     int stop = -1;
-    int maximosClientesAtendidos = 25;
+    int maximosClientesAtendidos = 5;
     //int nClientesEnCola = nClientes;
 
-    while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes) && nClientesAtendidos < maximosClientesAtendidos)
+    while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes))
     {
         //abrir cajas
         if(nClientesEnCola > 2 * nCajasAbiertas && nCajasAbiertas < nprocs -1)
@@ -85,14 +85,17 @@ void master(int nprocs)
             }
             else
             {
-                struct Cliente temp;
-                temp = sacarPrimero(&colaDormidos);
-                temp.isSleep = 0;
-                temp.sleepTimer = MAX_SLEEP;
-                nClientesDormidos--;
-                meterUltimo(&colaClientes, temp);
-                nClientesEnCola++;
-                printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
+                if(nClientesAtendidos < maximosClientesAtendidos)
+                {
+                    struct Cliente temp;
+                    temp = sacarPrimero(&colaDormidos);
+                    temp.isSleep = 0;
+                    temp.sleepTimer = MAX_SLEEP;
+                    nClientesDormidos--;
+                    meterUltimo(&colaClientes, temp);
+                    nClientesEnCola++;
+                    printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
+                }
             }
 
             
@@ -138,7 +141,10 @@ void master(int nprocs)
         //     nClientesEnCola = longitudCola(&colaClientes); 
         // }
         // printf("numero de clientes en la cola: %d \n", nClientesEnCola);
-
+        if(nClientesAtendidos >= maximosClientesAtendidos)
+        {
+            printf("Se ha alcanzado el máximo de clientes atendidos. La cola ya no admitirá nuevos clientes\n");
+        }
         sleep(1);
     }
     
