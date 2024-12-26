@@ -32,8 +32,8 @@ int estaLlena(struct Cola* cola) {
     return cola->final == nElementos - 1;
 }
 
-// Enfilear (agregar un elemento a la cola)
-void enfilear(struct Cola* cola, struct Cliente valor) {
+// (agregar un elemento a la cola)
+void meterUltimo(struct Cola* cola, struct Cliente valor) {
     if (estaLlena(cola)) {
         //printf("La cola está llena, no se puede enfilear.\n");
     } else {
@@ -46,8 +46,8 @@ void enfilear(struct Cola* cola, struct Cliente valor) {
     }
 }
 
-// Desenfilear (eliminar un elemento de la cola)
-struct Cliente desenfilear(struct Cola* cola) {
+// (eliminar un elemento de la cola)
+struct Cliente sacarPrimero(struct Cola* cola) {
     struct Cliente cliente;
     if (estaVacia(cola)) {
         //printf("La cola está vacía, no se puede desenfilear.\n");
