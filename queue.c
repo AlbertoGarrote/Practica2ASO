@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Definimos una constante para el tamaño máximo de la cola
-#define MAX 20
-
-// Estructura de la cola
+#define nElementos 20
 
 struct Cliente
 {
@@ -14,14 +11,15 @@ struct Cliente
 };
 
 struct Cola {
-    struct Cliente elementos[MAX];
-    int frente, final;
+    struct Cliente elementos[nElementos];
+    int frente, final, idx;
 };
 
-// Inicializar la cola
+// Constructor de la cola
 void inicializarCola(struct Cola* cola) {
     cola->frente = -1;
     cola->final = -1;
+    cola->idx = -1;
 }
 
 // Verifica si la cola está vacía
@@ -31,7 +29,7 @@ int estaVacia(struct Cola* cola) {
 
 // Verifica si la cola está llena
 int estaLlena(struct Cola* cola) {
-    return cola->final == MAX - 1;
+    return cola->final == nElementos - 1;
 }
 
 // Enfilear (agregar un elemento a la cola)
@@ -69,11 +67,11 @@ struct Cliente desenfilear(struct Cola* cola) {
 // Función para mostrar el contenido de la cola
 void mostrarCola(struct Cola* cola) {
     if (estaVacia(cola)) {
-        //printf("La cola está vacía.\n");
+        printf("La cola está vacía.\n");
     } else {
-        //printf("Elementos de la cola: ");
+        printf("Elementos de la cola: \n");
         for (int i = cola->frente; i <= cola->final; i++) {
-            //printf("%d ", cola->elementos[i].idCliente);
+            printf("%d \n", cola->elementos[i].idCliente);
         }
         //printf("\n");
     }
@@ -81,6 +79,6 @@ void mostrarCola(struct Cola* cola) {
 
 int longitudCola(struct Cola* cola)
 {
-    return cola->final;
+    return cola->final+1;
 }
 
