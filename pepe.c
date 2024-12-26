@@ -31,10 +31,10 @@ void master(int nprocs)
     int stop = -1;
     int nClientesEnCola = nClientes;
 
-    while (!estaVacia(&colaClientes) || nClientesAtendidos <= nClientes - 1)
+    while (nClientesEnCola > 0 || nClientesAtendidos <= nClientes - 1)
     {
         //abrir cajas
-        nClientesEnCola = longitudCola(&colaClientes); 
+        //nClientesEnCola = longitudCola(&colaClientes); 
         if(nClientesEnCola > 2 * nCajasAbiertas && nCajasAbiertas < nprocs -1)
         {
             nCajasAbiertas++;
@@ -51,9 +51,10 @@ void master(int nprocs)
         {
             int tiempoCliente = 5 + ((rand()) % 6);
             int idCliente = desenfilear(&colaClientes).idCliente;
+            nClientesEnCola--;
             MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
             MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-            nClientesEnCola = longitudCola(&colaClientes); 
+            
             //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
         }
 
@@ -74,7 +75,7 @@ void master(int nprocs)
         printf("Cliente %d atendido en caja %d\n", idClienteAtendido, idCaja);
         nClientesAtendidos++;
 
-        //printf("numero de clientes en la cola: %d \n", nClientesEnCola);
+        printf("numero de clientes en la cola: %d \n", nClientesEnCola);
         sleep(1);
     }
     

@@ -6,12 +6,12 @@
 
 // Estructura de la cola
 
-   struct Cliente
-    {
-        int idCliente;
-        int isSleep;
-        int sleepTimer;
-    };
+struct Cliente
+{
+    int idCliente;
+    int isSleep;
+    int sleepTimer;
+};
 
 struct Cola {
     struct Cliente elementos[MAX];
