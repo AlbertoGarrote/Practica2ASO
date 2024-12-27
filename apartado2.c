@@ -4,11 +4,11 @@
 #include <unistd.h>
 #include <time.h>
 
-#include "queue.c"
+#include "queue2.c"
 #define LIBRE 0
 #define OCUPADA 1
 
-const int MAX_SLEEP = 10;
+const int MAX_SLEEP = 2;
 
 void master(int nprocs)
 {
@@ -18,6 +18,8 @@ void master(int nprocs)
     struct Cola colaDormidos;
     inicializarCola(&colaClientes);
     inicializarCola(&colaDormidos);
+    time_t currentTime;
+    int tiempoCliente;
 
     int estadoCajas[nprocs -1];
     for (int i = 0; i< nprocs-1;i++)
@@ -30,13 +32,23 @@ void master(int nprocs)
         clientes[i].idCliente = i;
         clientes[i].isSleep = 0;
         clientes[i].sleepTimer = MAX_SLEEP;
+
+        // Asignar prioritario o no prioritario
+        if (i%2 == 0)
+        {
+            clientes[i].tipo = PRIORITARIO;
+        }
+        else
+        {
+            clientes[i].tipo = NO_PRIORITARIO;
+        }
         meterUltimo(&colaClientes, clientes[i]);
     }
     
     int nClientesEnCola = longitudCola(&colaClientes); 
     int nClientesDormidos = 0;
     printf("Longitud de la cola: %d\n", nClientesEnCola);
-    //mostrarCola(&colaClientes);
+    mostrarCola(&colaClientes);
     
     int nCajasAbiertas = nprocs/2;
     int nClientesAtendidos = 0;
@@ -62,11 +74,23 @@ void master(int nprocs)
         for (int i = 1; i <= nCajasAbiertas && nClientesEnCola > 0; i++)
         {
             if(estadoCajas[i] == LIBRE){
-                int tiempoCliente = 5 + ((rand()) % 6);
+                
                 struct Cliente clienteSacado;
                 clienteSacado = sacarPrimero(&colaClientes);
                 int idCliente = clienteSacado.idCliente;
+                int tipoCliente = clienteSacado.tipo;
+
+                if (tipoCliente == NO_PRIORITARIO)
+                {
+                    tiempoCliente = 5 + ((rand()) % 6);
+                }
+                else
+                {
+                    tiempoCliente = 10 + (rand() % 11);
+                }
+
                 MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                MPI_Send(&tipoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 estadoCajas[i] = OCUPADA;
                 nClientesEnCola--;
@@ -95,16 +119,14 @@ void master(int nprocs)
                     meterUltimo(&colaClientes, temp);
                     nClientesEnCola++;
                     printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
+                    mostrarCola(&colaClientes);
                 }
             }
 
             
         }
 
-        
-        
-
-        
+                
         // for(int i = 1; i<= nCajasAbiertas && nClientesAtendidos < 20; i++)
         // {
         //     int idClienteAtendido;
@@ -117,14 +139,25 @@ void master(int nprocs)
         // Recibir mensaje de clientes atendidos
         int idClienteAtendido;
         int idCaja;
+        int tipoClienteAtendido;
+
         MPI_Recv(&idClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(&idCaja, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&tipoClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
         estadoCajas[idCaja] = LIBRE;
-        printf("Cliente %d atendido en caja %d\n", idClienteAtendido, idCaja);
+
+        printf("Cliente %d, de tipo: %d, atendido en caja %d\n", idClienteAtendido,tipoClienteAtendido, idCaja);
+
         struct Cliente temp = colaClientes.elementos[idClienteAtendido];
         temp.isSleep = 1;
         temp.sleepTimer = MAX_SLEEP;
+        temp.tipo = ((rand() % 10) < 7) ? 0 : 1;
+
         meterUltimo(&colaDormidos, temp);
+        //mostrarCola(&colaDormidos);
+        //mostrarCola(&colaClientes);
+
         nClientesDormidos++;
         nClientesAtendidos++;
 
@@ -136,6 +169,7 @@ void master(int nprocs)
         {
             printf("Se ha alcanzado el máximo de clientes atendidos. La cola ya no admitirá nuevos clientes\n");
         }
+
         sleep(1);
     }
     
@@ -154,6 +188,7 @@ void slave(int rank)
         srand(time(NULL));
         int idCliente;
         int tiempoCliente;
+        int tipoCliente;
 
         MPI_Recv(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         
@@ -161,15 +196,24 @@ void slave(int rank)
         {
             break;
         }
+        MPI_Recv(&tipoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        MPI_Recv(&tiempoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        printf("Yo, el cliente %d, dormire: %d y estoy en la caja: %d\n", idCliente, tiempoCliente, rank);
+        if(tipoCliente == NO_PRIORITARIO)
+        {
+            MPI_Recv(&tiempoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Yo, el cliente NORMAL %d, dormire: %d y estoy en la caja: %d\n", idCliente, tiempoCliente, rank);
+            sleep(tiempoCliente);
+        }
+        else
+        {
+            MPI_Recv(&tiempoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Yo, el cliente VIP %d, dormire: %d y estoy en la caja: %d\n", idCliente, tiempoCliente, rank);
+            sleep(tiempoCliente);
+        }
         
-        sleep(tiempoCliente);
-
         MPI_Send(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
         MPI_Send(&rank, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
+        MPI_Send(&tipoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
 
     }
 }
