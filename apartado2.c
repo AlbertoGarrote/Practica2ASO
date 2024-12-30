@@ -8,14 +8,14 @@
 #define LIBRE 0
 #define OCUPADA 1
 
-const int MAX_SLEEP = 2;
+const int MAX_SLEEP = 4;
 
 void master(int nprocs)
 {
     int nClientes = 20;
-    struct Cliente clientes[nClientes];
-    struct Cola colaClientes;
-    struct Cola colaDormidos;
+    Cliente clientes[nClientes];
+    Cola colaClientes;
+    Cola colaDormidos;
     inicializarCola(&colaClientes);
     inicializarCola(&colaDormidos);
     time_t currentTime;
@@ -48,12 +48,12 @@ void master(int nprocs)
     int nClientesEnCola = longitudCola(&colaClientes); 
     int nClientesDormidos = 0;
     printf("Longitud de la cola: %d\n", nClientesEnCola);
-    mostrarCola(&colaClientes);
+    //mostrarCola(&colaClientes);
     
     int nCajasAbiertas = nprocs/2;
     int nClientesAtendidos = 0;
     int stop = -1;
-    int maximosClientesAtendidos = 5;
+    int maximosClientesAtendidos = 10;
     //int nClientesEnCola = nClientes;
 
     while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes))
@@ -75,7 +75,7 @@ void master(int nprocs)
         {
             if(estadoCajas[i] == LIBRE){
                 
-                struct Cliente clienteSacado;
+                Cliente clienteSacado;
                 clienteSacado = sacarPrimero(&colaClientes);
                 int idCliente = clienteSacado.idCliente;
                 int tipoCliente = clienteSacado.tipo;
@@ -111,7 +111,7 @@ void master(int nprocs)
             {
                 if(nClientesAtendidos < maximosClientesAtendidos)
                 {
-                    struct Cliente temp;
+                    Cliente temp;
                     temp = sacarPrimero(&colaDormidos);
                     temp.isSleep = 0;
                     temp.sleepTimer = MAX_SLEEP;
@@ -119,7 +119,6 @@ void master(int nprocs)
                     meterUltimo(&colaClientes, temp);
                     nClientesEnCola++;
                     printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
-                    mostrarCola(&colaClientes);
                 }
             }
 
@@ -149,7 +148,7 @@ void master(int nprocs)
 
         printf("Cliente %d, de tipo: %d, atendido en caja %d\n", idClienteAtendido,tipoClienteAtendido, idCaja);
 
-        struct Cliente temp = colaClientes.elementos[idClienteAtendido];
+        Cliente temp = colaClientes.elementos[idClienteAtendido];
         temp.isSleep = 1;
         temp.sleepTimer = MAX_SLEEP;
         temp.tipo = ((rand() % 10) < 7) ? 0 : 1;

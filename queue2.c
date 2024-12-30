@@ -1,87 +1,83 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define nElementos 20
 #define NO_PRIORITARIO 0
 #define PRIORITARIO 1
 
-struct Cliente
+#define nElementos 20
+
+typedef struct 
 {
     int idCliente;
     int isSleep;
     int sleepTimer;
     int tipo;
-};
+}Cliente;
 
-struct Cola {
-    struct Cliente elementos[nElementos];
-    int frente, final, idx;
-};
+typedef struct {
+    Cliente elementos[nElementos];
+    int front;
+    int rear;
+} Cola;
 
-// Constructor de la cola
-void inicializarCola(struct Cola* cola) {
-    cola->frente = -1;
-    cola->final = -1;
-    cola->idx = -1;
+// Inicializa la cola
+void inicializarCola(Cola *q) {
+    q->front = -1;
+    q->rear = -1;
 }
 
 // Verifica si la cola está vacía
-int estaVacia(struct Cola* cola) {
-    return cola->frente == -1;
+int isEmpty(Cola *q) {
+    return q->front == -1;
 }
 
 // Verifica si la cola está llena
-int estaLlena(struct Cola* cola) {
-    return cola->final == nElementos - 1;
+int isFull(Cola *q) {
+    return (q->rear + 1) % nElementos == q->front;
 }
 
-// (agregar un elemento a la cola)
-void meterUltimo(struct Cola* cola, struct Cliente valor) {
-    if (estaLlena(cola)) {
-        //printf("La cola está llena, no se puede enfilear.\n");
-    } else {
-        if (cola->frente == -1) {
-            cola->frente = 0;  // Si la cola estaba vacía, asignamos el primer valor al frente
-        }
-        cola->final++;
-        cola->elementos[cola->final] = valor;
-        //printf("Enfileado %d\n", valor.idCliente);
+// Inserta un elemento en la cola
+void meterUltimo(Cola *q, Cliente value) {
+    if (isFull(q)) {
+        printf("Error: La cola está llena.\n");
+        return;
     }
-}
-
-// (eliminar un elemento de la cola)
-struct Cliente sacarPrimero(struct Cola* cola) {
-    struct Cliente cliente;
-    if (estaVacia(cola)) {
-        //printf("La cola está vacía, no se puede desenfilear.\n");
-        return cliente;
-    } else {
-        cliente = cola->elementos[cola->frente];
-        if (cola->frente == cola->final) {
-            cola->frente = cola->final = -1;  // La cola queda vacía
-        } else {
-            cola->frente++;
-        }
-        //printf("Desenfileado %d\n", cliente.idCliente);
-        return cliente;
+    if (isEmpty(q)) {
+        q->front = 0;
     }
+    q->rear = (q->rear + 1) % nElementos;
+    q->elementos[q->rear] = value;
+    //printf("Se insertó el elemento {id: %d, name: %s} en la cola.\n", value.id, value.name);
 }
 
-// Función para mostrar el contenido de la cola
-void mostrarCola(struct Cola* cola) {
-    if (estaVacia(cola)) {
-        printf("La cola está vacía.\n");
-    } else {
-        printf("Elementos de la cola: \n");
-        for (int i = cola->frente; i <= cola->final; i++) {
-            printf("%d,%d \n", cola->elementos[i].idCliente,cola->elementos[i].tipo);
-        }
-        //printf("\n");
+// Elimina un elemento de la cola
+Cliente sacarPrimero(Cola *q) {
+    if (isEmpty(q)) {
+        printf("Error: La cola está vacía.\n");
+        Cliente emptyItem = {-1, -1, -1}; // Elemento vacío para devolver en caso de error
+        return emptyItem;
     }
+    Cliente value = q->elementos[q->front];
+    if (q->front == q->rear) { // Si sólo hay un elemento
+        q->front = -1;
+        q->rear = -1;
+    } else {
+        q->front = (q->front + 1) % nElementos;
+    }
+    //printf("Se eliminó el elemento {id: %d, name: %s} de la cola.\n", value.id, value.name);
+    return value;
 }
 
-int longitudCola(struct Cola* cola)
-{
-    return cola->final+1;
+int longitudCola(Cola *q) {
+    if (isEmpty(q)) {
+        return 0; // Si la cola está vacía, la longitud es 0
+    }
+    if (q->rear >= q->front) {
+        return q->rear - q->front + 1; // Caso normal
+    } else {
+        return nElementos - q->front + q->rear + 1; // Caso circular
+    }
 }
 
