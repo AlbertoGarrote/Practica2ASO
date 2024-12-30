@@ -8,14 +8,14 @@
 #define LIBRE 0
 #define OCUPADA 1
 
-const int MAX_SLEEP = 10;
+const int MAX_SLEEP = 4;
 
 void master(int nprocs)
 {
     int nClientes = 20;
-    struct Cliente clientes[nClientes];
-    struct Cola colaClientes;
-    struct Cola colaDormidos;
+    Cliente clientes[nClientes];
+    Cola colaClientes;
+    Cola colaDormidos;
     inicializarCola(&colaClientes);
     inicializarCola(&colaDormidos);
 
@@ -41,7 +41,7 @@ void master(int nprocs)
     int nCajasAbiertas = nprocs/2;
     int nClientesAtendidos = 0;
     int stop = -1;
-    int maximosClientesAtendidos = 5;
+    int maximosClientesAtendidos = 10;
     //int nClientesEnCola = nClientes;
 
     while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes))
@@ -63,7 +63,7 @@ void master(int nprocs)
         {
             if(estadoCajas[i] == LIBRE){
                 int tiempoCliente = 5 + ((rand()) % 6);
-                struct Cliente clienteSacado;
+                Cliente clienteSacado;
                 clienteSacado = sacarPrimero(&colaClientes);
                 int idCliente = clienteSacado.idCliente;
                 MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
@@ -87,24 +87,19 @@ void master(int nprocs)
             {
                 if(nClientesAtendidos < maximosClientesAtendidos)
                 {
-                    struct Cliente temp;
+                    Cliente temp;
                     temp = sacarPrimero(&colaDormidos);
                     temp.isSleep = 0;
                     temp.sleepTimer = MAX_SLEEP;
                     nClientesDormidos--;
+                    printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
                     meterUltimo(&colaClientes, temp);
                     nClientesEnCola++;
-                    printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
+                    //printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
                 }
             }
-
-            
         }
 
-        
-        
-
-        
         // for(int i = 1; i<= nCajasAbiertas && nClientesAtendidos < 20; i++)
         // {
         //     int idClienteAtendido;
@@ -121,7 +116,7 @@ void master(int nprocs)
         MPI_Recv(&idCaja, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         estadoCajas[idCaja] = LIBRE;
         printf("Cliente %d atendido en caja %d\n", idClienteAtendido, idCaja);
-        struct Cliente temp = colaClientes.elementos[idClienteAtendido];
+        Cliente temp = colaClientes.elementos[idClienteAtendido];
         temp.isSleep = 1;
         temp.sleepTimer = MAX_SLEEP;
         meterUltimo(&colaDormidos, temp);
