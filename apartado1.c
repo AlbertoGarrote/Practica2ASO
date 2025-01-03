@@ -13,6 +13,7 @@ const int MAX_SLEEP = 4;
 void master(int nprocs)
 {
     int nClientes = 20;
+
     Cliente clientes[nClientes];
     Cola colaClientes;
     Cola colaDormidos;
@@ -36,7 +37,7 @@ void master(int nprocs)
     int nClientesEnCola = longitudCola(&colaClientes); 
     int nClientesDormidos = 0;
     printf("Longitud de la cola: %d\n", nClientesEnCola);
-    //mostrarCola(&colaClientes);
+    
     
     int nCajasAbiertas = nprocs/2;
     int nClientesAtendidos = 0;
@@ -44,7 +45,7 @@ void master(int nprocs)
     int maximosClientesAtendidos = 10;
     //int nClientesEnCola = nClientes;
 
-    while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes))
+    while ((nClientesEnCola > 0))
     {
         //abrir cajas
         if(nClientesEnCola > 2 * nCajasAbiertas && nCajasAbiertas < nprocs -1)
@@ -70,7 +71,7 @@ void master(int nprocs)
                 MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 estadoCajas[i] = OCUPADA;
                 nClientesEnCola--;
-                //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
+                
             }
         }
 
@@ -171,12 +172,12 @@ void slave(int rank)
 
 int main(int argc, char **argv)
 {
-//printf("iniciando");
+
  int rank, nprocs;
  MPI_Init(&argc, &argv);
  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
- //printf("Hola mundo, soy el proceso %d de los %d que se están ejecutando\n", rank, nprocs);
+
 
  if (nprocs < 2)
     {
