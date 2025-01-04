@@ -4,24 +4,26 @@
 #include <unistd.h>
 #include <time.h>
 
-#include "queue2.c"
+#include "priorityQueue.c"
 #define LIBRE 0
 #define OCUPADA 1
 
-#define MAX_SLEEP 4;
+
+#define MAX_SLEEP 8;
 
 void master(int nprocs)
 {
     int nClientes = 20;
     Cliente clientes[nClientes];
-    Cola colaClientes;
-    Cola colaPrioritarios;
+    ColaPrioridad colaClientes;
     Cola colaDormidos;
-    inicializarCola(&colaPrioritarios);
-    inicializarCola(&colaClientes);
+
+    inicializarColaPrioridad(&colaClientes);
     inicializarCola(&colaDormidos);
     time_t currentTime;
     int tiempoCliente;
+    int nClientesEnCola = 0;
+    int nClientesPrioritariosEnCola = 0;
 
     int estadoCajas[nprocs];
     estadoCajas[0] = OCUPADA;
@@ -40,22 +42,18 @@ void master(int nprocs)
         if (i%2 == 0)
         {
             clientes[i].tipo = PRIORITARIO;
-            meterUltimo(&colaPrioritarios, clientes[i]);
+            nClientesPrioritariosEnCola++;
         }
         else
         {
             clientes[i].tipo = NO_PRIORITARIO;
-            meterUltimo(&colaClientes, clientes[i]);
         }
-        
+        enqueue(&colaClientes, clientes[i], clientes[i].tipo);
+        nClientesEnCola++;
     }
-    
-    int nClientesEnCola = longitudCola(&colaClientes); 
-    int nClientesEnColaPrioritaria = longitudCola(&colaPrioritarios);
     
     int nClientesDormidos = 0;
     printf("Longitud de la cola normal: %d\n", nClientesEnCola);
-    printf("Longitud de la cola prioritaria: %d\n", nClientesEnColaPrioritaria);
     
     //mostrarCola(&colaClientes);
     
@@ -76,12 +74,12 @@ void master(int nprocs)
     int nClientesAtendidos = 0;
     int stop = -1;
     int maximosClientesAtendidos = 10;
-    //int nClientesEnCola = nClientes;
+
     printf("%d Cajas normales: 1 - %d\n", cajasNormales, cajasNormales);
     printf("%d Cajas prioritarias: %d - %d\n", cajasPrioritarias, cajasNormales+1, cajasNormales+cajasPrioritarias);
 
 
-    while ((nClientesEnCola+nClientesEnColaPrioritaria > 0 || nClientesAtendidos < nClientes))
+    while ((nClientesEnCola > 0 || nClientesAtendidos < nClientes))
     {
         //abrir cajas normales
         if(nClientesEnCola > 2 * nCajaNormalesAbiertas && nCajaNormalesAbiertas < cajasNormales)
@@ -92,7 +90,7 @@ void master(int nprocs)
         }
 
         //abrir cajas prioritarias
-        if(nClientesEnColaPrioritaria > 2 * nCajasPrioritariasAbiertas && nCajasPrioritariasAbiertas < cajasPrioritarias)
+        if(nClientesPrioritariosEnCola > 2 * nCajasPrioritariasAbiertas && nCajasPrioritariasAbiertas < cajasPrioritarias)
         {
             nCajasPrioritariasAbiertas++;
             printf("caja prioritaria abierta. %d cajas prioritarias abiertas\n", nCajasPrioritariasAbiertas);
@@ -107,10 +105,44 @@ void master(int nprocs)
         }
 
         //cerrar cajas prioritarias
-        if(nCajasPrioritariasAbiertas > nClientesEnColaPrioritaria && nCajasPrioritariasAbiertas > 0)
+        if(nCajasPrioritariasAbiertas > nClientesPrioritariosEnCola && nCajasPrioritariasAbiertas > 0)
         {
             printf("caja prioritaria cerrada\n");
             nCajasPrioritariasAbiertas--;
+        }
+
+         //asignar clientes a cajas prioritarios
+        for (int i = cajasNormales+1; i <= cajasNormales+nCajasPrioritariasAbiertas+1 && nClientesPrioritariosEnCola > 0; i++)
+        {
+            
+            if(estadoCajas[i] == LIBRE){
+                
+                Cliente clienteSacado;
+                if(colaClientes.pqVal[peek(&colaClientes)].tipo == PRIORITARIO)
+                {
+                    clienteSacado = dequeue(&colaClientes);
+                    int idCliente = clienteSacado.idCliente;
+                    int tipoCliente = clienteSacado.tipo;
+                    tiempoCliente = 10 + (rand() % 11);
+                    /*
+                    if (tipoCliente == NO_PRIORITARIO)
+                    {
+                        tiempoCliente = 5 + ((rand()) % 6);
+                    }
+                    else
+                    {
+                        tiempoCliente = 10 + (rand() % 11);
+                    }
+                    */
+                    MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                    MPI_Send(&tipoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                    MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+                    nCajasPrioritariasOcupadas++;
+                    estadoCajas[i] = OCUPADA;
+                    nClientesPrioritariosEnCola--;
+                    //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
+                }
+            }
         }
 
         //asignar clientes a cajas normales
@@ -119,67 +151,28 @@ void master(int nprocs)
             if(estadoCajas[i] == LIBRE){
 
                 Cliente clienteSacado;
-                if(nCajasPrioritariasOcupadas >= nCajasPrioritariasAbiertas && nClientesEnColaPrioritaria > 0)
+                clienteSacado = dequeue(&colaClientes);
+                int idCliente = clienteSacado.idCliente;
+                int tipoCliente = clienteSacado.tipo;
+                if(tipoCliente == PRIORITARIO)
                 {
-                    clienteSacado = sacarPrimero(&colaPrioritarios);
-                    int idCliente = clienteSacado.idCliente;
-                    int tipoCliente = PRIORITARIO;
                     tiempoCliente = 10 + (rand() % 11);
-                    
-                    MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    MPI_Send(&tipoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    nCajasNormalesOcupadas++;
-                    estadoCajas[i] = OCUPADA;
-                    nClientesEnColaPrioritaria--;
+                    nClientesPrioritariosEnCola--;
                 }else
                 {
-                    clienteSacado = sacarPrimero(&colaClientes);
-                    int idCliente = clienteSacado.idCliente;
-                    int tipoCliente = NO_PRIORITARIO;
-                    tiempoCliente = 5 + ((rand()) % 6);
-                    MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    MPI_Send(&tipoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                    nCajasNormalesOcupadas++;
-                    estadoCajas[i] = OCUPADA;
-                    nClientesEnCola--;
+                     tiempoCliente = 5 + ((rand()) % 6);
                 }
-                
-                
-            }
-        }
-
-        //asignar clientes a cajas prioritarios
-        for (int i = cajasNormales+1; i <= cajasNormales+nCajasPrioritariasAbiertas && nClientesEnColaPrioritaria > 0; i++)
-        {
-            
-            if(estadoCajas[i] == LIBRE){
-                
-                Cliente clienteSacado;
-                clienteSacado = sacarPrimero(&colaPrioritarios);
-                int idCliente = clienteSacado.idCliente;
-                int tipoCliente = PRIORITARIO;
-                tiempoCliente = 10 + (rand() % 11);
-                /*
-                if (tipoCliente == NO_PRIORITARIO)
-                {
-                    tiempoCliente = 5 + ((rand()) % 6);
-                }
-                else
-                {
-                    tiempoCliente = 10 + (rand() % 11);
-                }
-                */
+               
                 MPI_Send(&idCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&tipoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&tiempoCliente, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                nCajasPrioritariasOcupadas++;
+                nCajasNormalesOcupadas++;
                 estadoCajas[i] = OCUPADA;
-                nClientesEnColaPrioritaria--;
-                //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
+                nClientesEnCola--;
             }
         }
+
+       
 
         
 
@@ -204,13 +197,14 @@ void master(int nprocs)
                     nClientesDormidos--;
                     if(tipoCliente == PRIORITARIO)
                     {
-                        meterUltimo(&colaPrioritarios, temp);
-                        nClientesEnColaPrioritaria++;
+                        enqueue(&colaClientes, temp, temp.tipo);
+                        nClientesPrioritariosEnCola++;
+                        nClientesEnCola++;
                         printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
                     }else{
-                        meterUltimo(&colaClientes, temp);
+                        enqueue(&colaClientes, temp, temp.tipo);
                         nClientesEnCola++;
-                        printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnColaPrioritaria);
+                        printf("El cliente %d ha vuelto a la cola, hay %d clientes en la cola\n", temp.idCliente, nClientesEnCola);
                     }
                     
                     
@@ -252,10 +246,10 @@ void master(int nprocs)
 
         printf("Cliente %d, de tipo: %d, atendido en caja %d\n", idClienteAtendido,tipoClienteAtendido, idCaja);
 
-        Cliente temp = colaClientes.elementos[idClienteAtendido];
+        Cliente temp = clientes[idClienteAtendido];
         temp.isSleep = 1;
         temp.sleepTimer = MAX_SLEEP;
-        temp.tipo = ((rand() % 10) < 7) ? 0 : 1;
+        temp.tipo = temp.tipo;
 
         meterUltimo(&colaDormidos, temp);
         //mostrarCola(&colaDormidos);
@@ -265,8 +259,8 @@ void master(int nprocs)
         nClientesAtendidos++;
 
         printf("numero de clientes atendidos: %d \n", nClientesAtendidos);
-        printf("numero de clientes en la cola normal: %d \n", nClientesEnCola);
-        printf("numero de clientes en la cola prioritaria: %d \n", nClientesEnColaPrioritaria);
+        printf("numero de clientes en la cola: %d \n", nClientesEnCola);
+        printf("numero de clientes prioritarios en la cola: %d \n", nClientesPrioritariosEnCola);
         //nClientesEnCola = longitudCola(&colaClientes); 
 
         if(nClientesAtendidos >= maximosClientesAtendidos)
