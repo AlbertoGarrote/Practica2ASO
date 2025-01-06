@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define nElementos 20
+
 #define NO_PRIORITARIO 0
 #define PRIORITARIO 1
 
-#define nElementos 20
+#define nElementos 50
 
 typedef struct 
 {

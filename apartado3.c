@@ -140,6 +140,7 @@ void master(int nprocs)
                     nCajasPrioritariasOcupadas++;
                     estadoCajas[i] = OCUPADA;
                     nClientesPrioritariosEnCola--;
+                    nClientesEnCola--;
                     //printf("longitud de la cola %d\n", longitudCola(&colaClientes));
                 }
             }
@@ -232,7 +233,7 @@ void master(int nprocs)
 
         MPI_Recv(&idClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(&idCaja, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&tipoClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&tipoClienteAtendido, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         estadoCajas[idCaja] = LIBRE;
         if(idCaja <= cajasNormales)
@@ -311,7 +312,7 @@ void slave(int rank)
         
         MPI_Send(&idCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
         MPI_Send(&rank, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
-        MPI_Send(&tipoCliente, 1, MPI_INT, 0,0, MPI_COMM_WORLD);
+        MPI_Send(&tipoCliente, 1, MPI_INT, 0,1, MPI_COMM_WORLD);
 
     }
 }
